@@ -127,7 +127,7 @@
       console.error('Constructor VersionStorage require a version at arguments[0]');
       return;
     }
-    this.version = version;
+    this.version = version + '';
     if (guarded && Array.isArray(guarded)) {
       guarded = unique(guarded.concat(defaultGuarded));
     } else {
