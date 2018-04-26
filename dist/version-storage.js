@@ -4,6 +4,41 @@
   (global.VersionStorage = factory());
 }(this, (function () { 'use strict';
 
+  var toConsumableArray = function (arr) {
+    if (Array.isArray(arr)) {
+      for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+      return arr2;
+    } else {
+      return Array.from(arr);
+    }
+  };
+
+  function suffix(key, word) {
+    var seperator = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '_';
+
+    return '' + key + seperator + word;
+  }
+
+  function unique(arr) {
+    return [].concat(toConsumableArray(new Set(arr)));
+  }
+
+  function serialize(val) {
+    return JSON.stringify(val);
+  }
+
+  function deserialize(val) {
+    if (typeof val !== 'string') {
+      return undefined;
+    }
+    try {
+      return JSON.parse(val);
+    } catch (e) {
+      return val || undefined;
+    }
+  }
+
   /**
    * 本地存储实现,封装localStorage和sessionStorage
    */
@@ -72,21 +107,6 @@
 
   Object.assign(store.session, api);
 
-  function serialize(val) {
-    return JSON.stringify(val);
-  }
-
-  function deserialize(val) {
-    if (typeof val !== 'string') {
-      return undefined;
-    }
-    try {
-      return JSON.parse(val);
-    } catch (e) {
-      return val || undefined;
-    }
-  }
-
   try {
     var testKey = '__storejs__';
     store.set(testKey, testKey);
@@ -98,35 +118,41 @@
     store.disabled = true;
   }
 
-  function suffix(key, word) {
-    var seperator = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '_';
-
-    return '' + key + seperator + word;
-  }
-
   var GUARDED = 'guarded';
   var VERSION = 'version';
+  var defaultGuarded = [GUARDED, VERSION];
 
-  function VersionStorage(version) {
+  function VersionStorage(version, guarded) {
     if (!version) {
       console.error('Constructor VersionStorage require a version at arguments[0]');
       return;
     }
     this.version = version;
-    this.defaultGuarded = [GUARDED, VERSION];
+    if (guarded && Array.isArray(guarded)) {
+      guarded = unique(guarded.concat(defaultGuarded));
+    } else {
+      guarded = defaultGuarded;
+    }
+    this.guarded = guarded;
     this._init();
   }
 
   VersionStorage.prototype.set = function (key, val) {
-    var realKey = this._getKey(key);
-    return store.set(realKey, val);
+    var nosuffix = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    if (!nosuffix) {
+      var realKey = this._getKey(key);
+      return store.set(realKey, val);
+    }
+    var guarded = store.get(GUARDED);
+    guarded = unique(guarded.concat(key));
+    store.set(GUARDED, guarded);
+    this.guarded = guarded;
+    return store.set(key, val);
   };
 
-  VersionStorage.prototype.setWithoutVersion = function (key, val) {
-    var guarded = store.get(GUARDED);
-    guarded.push(key);
-    store.set(GUARDED, guarded);
-    return store.set(key, val);
+  VersionStorage.prototype.setDirect = function (key, val) {
+    return this.set(key, val, true);
   };
 
   VersionStorage.prototype.get = function (key, def) {
@@ -169,12 +195,26 @@
   };
 
   VersionStorage.prototype._init = function () {
-    var guarded = store.get(GUARDED);
+    var localGuarded = store.get(GUARDED);
     var localVersion = store.get(VERSION);
-    if (!guarded || !Array.isArray(guarded) || !localVersion || this.version !== localVersion) {
-      store.clear();
-      store.set(GUARDED, this.defaultGuarded);
+
+    // 当前版本不匹配, 或者guarded字段不存在, 将默认guarded设为guarded, 然后清除非guarded字段
+    if (!localGuarded || !localVersion || this.version !== localVersion || !Array.isArray(localGuarded) || localGuarded.length <= 0 || !this.guarded.every(function (guard) {
+      return localGuarded.indexOf(guard) > -1;
+    })) {
+      store.set(GUARDED, this.guarded);
       store.set(VERSION, this.version);
+      var all = store.getAll();
+      for (var key in all) {
+        if (!this._isGuarded(key, this.guarded)) {
+          store.remove(key);
+        }
+      }
+    }
+
+    if (this.guarded.length > localGuarded.length) {
+      this.guarded = unique(this.guarded.concat(localGuarded));
+      store.set(GUARDED, this.guarded);
     }
   };
 

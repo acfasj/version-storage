@@ -10,8 +10,17 @@
   <script src="../dist/version-storage.js"></script>
   <script>
     const v1 = 'v1'
-    const store = new VersionStorage(v1)
-    console.log(store)
+    const guarded = [
+      'version',
+      'guarded',
+      'guard1',
+      'guard2',
+      'guard3',
+      'guard4',
+    ]
+    const versionStorage = new VersionStorage(v1, guarded)
+    window.versionStorage = versionStorage
+    console.log(versionStorage)
   </script>
 </body>
 </html>

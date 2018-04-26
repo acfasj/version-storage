@@ -1,3 +1,5 @@
+import { serialize, deserialize } from '../utils/utils'
+
 /**
  * 本地存储实现,封装localStorage和sessionStorage
  */
@@ -71,21 +73,6 @@ const api = {
 Object.assign(store, api)
 
 Object.assign(store.session, api)
-
-function serialize(val) {
-  return JSON.stringify(val)
-}
-
-function deserialize(val) {
-  if (typeof val !== 'string') {
-    return undefined
-  }
-  try {
-    return JSON.parse(val)
-  } catch (e) {
-    return val || undefined
-  }
-}
 
 try {
   const testKey = '__storejs__'

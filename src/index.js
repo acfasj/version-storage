@@ -1,29 +1,39 @@
 import storage from './storage/storage'
-import { suffix } from './utils/utils'
+import { suffix, unique } from './utils/utils'
 
 const GUARDED = 'guarded'
 const VERSION = 'version'
+const defaultGuarded = [GUARDED, VERSION]
 
-export default function VersionStorage(version) {
+export default function VersionStorage(version, guarded) {
   if (!version) {
     console.error('Constructor VersionStorage require a version at arguments[0]')
     return
   }
   this.version = version
-  this.defaultGuarded = [GUARDED, VERSION]
+  if (guarded && Array.isArray(guarded)) {
+    guarded = unique(guarded.concat(defaultGuarded))
+  } else {
+    guarded = defaultGuarded
+  }
+  this.guarded = guarded
   this._init()
 }
 
-VersionStorage.prototype.set = function (key, val) {
-  const realKey = this._getKey(key)
-  return storage.set(realKey, val)
+VersionStorage.prototype.set = function (key, val, nosuffix = false) {
+  if (!nosuffix) {
+    const realKey = this._getKey(key)
+    return storage.set(realKey, val)
+  }
+  let guarded = storage.get(GUARDED)
+  guarded = unique(guarded.concat(key))
+  storage.set(GUARDED, guarded)
+  this.guarded = guarded
+  return storage.set(key, val)
 }
 
-VersionStorage.prototype.setWithoutVersion = function (key, val) {
-  const guarded = storage.get(GUARDED)
-  guarded.push(key)
-  storage.set(GUARDED, guarded)
-  return storage.set(key, val)
+VersionStorage.prototype.setDirect = function (key, val) {
+  return this.set(key, val, true)
 }
 
 VersionStorage.prototype.get = function (key, def) {
@@ -66,14 +76,28 @@ VersionStorage.prototype._isGuarded = function (key, cacheGuarded) {
 }
 
 VersionStorage.prototype._init = function () {
-  const guarded = storage.get(GUARDED)
+  const localGuarded = storage.get(GUARDED)
   const localVersion = storage.get(VERSION)
-  if (!guarded ||
-    !Array.isArray(guarded) ||
+
+  // 当前版本不匹配, 或者guarded字段不存在, 将默认guarded设为guarded, 然后清除非guarded字段
+  if (!localGuarded ||
     !localVersion ||
-    this.version !== localVersion) {
-    storage.clear()
-    storage.set(GUARDED, this.defaultGuarded)
+    this.version !== localVersion ||
+    !Array.isArray(localGuarded) ||
+    localGuarded.length <= 0 ||
+    !this.guarded.every(guard => localGuarded.indexOf(guard) > -1)) {
+    storage.set(GUARDED, this.guarded)
     storage.set(VERSION, this.version)
+    const all = storage.getAll()
+    for (let key in all) {
+      if (!this._isGuarded(key, this.guarded)) {
+        storage.remove(key)
+      }
+    }
+  }
+
+  if (this.guarded.length > localGuarded.length) {
+    this.guarded = unique(this.guarded.concat(localGuarded))
+    storage.set(GUARDED, this.guarded)
   }
 }
