@@ -1,12 +1,29 @@
 {
   "name": "version-storage",
   "version": "0.0.1",
-  "main": "index.js",
+  "description": "a storage lib which support simple version control base on the package good-storage",
+  "main": "dist/version-storage.js",
   "license": "MIT",
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c"
   },
+  "keywords": [
+    "store",
+    "html5",
+    "storage",
+    "version control",
+    "local storage"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acfasj/version-storage.git"
+  },
+  "author": "acfasj",
+  "bugs": {
+    "url": "https://github.com/acfasj/version-storage/issues"
+  },
+  "homepage": "https://github.com/acfasj/version-storage#readme",
   "devDependencies": {
     "babel-core": "^6.26.0",
     "babel-plugin-external-helpers": "^6.22.0",
