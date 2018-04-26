@@ -1,6 +1,6 @@
 {
   "name": "v-storage",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "a storage lib which support simple version control base on the package good-storage",
   "main": "dist/version-storage.js",
   "license": "MIT",
