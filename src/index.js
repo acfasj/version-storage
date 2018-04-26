@@ -76,16 +76,17 @@ VersionStorage.prototype._isGuarded = function (key, cacheGuarded) {
 }
 
 VersionStorage.prototype._init = function () {
-  const localGuarded = storage.get(GUARDED)
   const localVersion = storage.get(VERSION)
+  const localGuarded = storage.get(GUARDED)
+
+  const versionLegal = localVersion && this.version === localVersion
+  const guardedLegal = localGuarded &&
+    Array.isArray(localGuarded) &&
+    localGuarded.length > 0 &&
+    this.guarded.every(guard => localGuarded.indexOf(guard) > -1)
 
   // 当前版本不匹配, 或者guarded字段不存在, 将默认guarded设为guarded, 然后清除非guarded字段
-  if (!localGuarded ||
-    !localVersion ||
-    this.version !== localVersion ||
-    !Array.isArray(localGuarded) ||
-    localGuarded.length <= 0 ||
-    !this.guarded.every(guard => localGuarded.indexOf(guard) > -1)) {
+  if (!versionLegal || !guardedLegal) {
     storage.set(GUARDED, this.guarded)
     storage.set(VERSION, this.version)
     const all = storage.getAll()
@@ -96,7 +97,7 @@ VersionStorage.prototype._init = function () {
     }
   }
 
-  if (this.guarded.length > localGuarded.length) {
+  if (guardedLegal && this.guarded.length > localGuarded.length) {
     this.guarded = unique(this.guarded.concat(localGuarded))
     storage.set(GUARDED, this.guarded)
   }

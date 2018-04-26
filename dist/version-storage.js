@@ -195,13 +195,16 @@
   };
 
   VersionStorage.prototype._init = function () {
-    var localGuarded = store.get(GUARDED);
     var localVersion = store.get(VERSION);
+    var localGuarded = store.get(GUARDED);
+
+    var versionLegal = localVersion && this.version === localVersion;
+    var guardedLegal = localGuarded && Array.isArray(localGuarded) && localGuarded.length > 0 && this.guarded.every(function (guard) {
+      return localGuarded.indexOf(guard) > -1;
+    });
 
     // 当前版本不匹配, 或者guarded字段不存在, 将默认guarded设为guarded, 然后清除非guarded字段
-    if (!localGuarded || !localVersion || this.version !== localVersion || !Array.isArray(localGuarded) || localGuarded.length <= 0 || !this.guarded.every(function (guard) {
-      return localGuarded.indexOf(guard) > -1;
-    })) {
+    if (!versionLegal || !guardedLegal) {
       store.set(GUARDED, this.guarded);
       store.set(VERSION, this.version);
       var all = store.getAll();
@@ -212,7 +215,7 @@
       }
     }
 
-    if (this.guarded.length > localGuarded.length) {
+    if (guardedLegal && this.guarded.length > localGuarded.length) {
       this.guarded = unique(this.guarded.concat(localGuarded));
       store.set(GUARDED, this.guarded);
     }
