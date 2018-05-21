@@ -2,6 +2,7 @@ import { serialize, deserialize } from '../utils/utils'
 
 /**
  * 本地存储实现,封装localStorage和sessionStorage
+ * author: https://github.com/ustbhuangyi/storage
  */
 let store = {
   storage: window.localStorage,

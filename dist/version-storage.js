@@ -138,21 +138,9 @@
   }
 
   VersionStorage.prototype.set = function (key, val) {
-    var nosuffix = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
-    if (!nosuffix) {
-      var realKey = this._getKey(key);
-      return store.set(realKey, val);
-    }
-    var guarded = store.get(GUARDED);
-    guarded = unique(guarded.concat(key));
-    store.set(GUARDED, guarded);
-    this.guarded = guarded;
-    return store.set(key, val);
-  };
-
-  VersionStorage.prototype.setDirect = function (key, val) {
-    return this.set(key, val, true);
+    var realKey = this._getKey(key);
+    return store.set(realKey, val);
   };
 
   VersionStorage.prototype.get = function (key, def) {
