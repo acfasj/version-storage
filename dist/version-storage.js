@@ -4,6 +4,30 @@
   (global.VersionStorage = factory());
 }(this, (function () { 'use strict';
 
+  var classCallCheck = function (instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  };
+
+  var createClass = function () {
+    function defineProperties(target, props) {
+      for (var i = 0; i < props.length; i++) {
+        var descriptor = props[i];
+        descriptor.enumerable = descriptor.enumerable || false;
+        descriptor.configurable = true;
+        if ("value" in descriptor) descriptor.writable = true;
+        Object.defineProperty(target, descriptor.key, descriptor);
+      }
+    }
+
+    return function (Constructor, protoProps, staticProps) {
+      if (protoProps) defineProperties(Constructor.prototype, protoProps);
+      if (staticProps) defineProperties(Constructor, staticProps);
+      return Constructor;
+    };
+  }();
+
   var toConsumableArray = function (arr) {
     if (Array.isArray(arr)) {
       for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
@@ -41,6 +65,7 @@
 
   /**
    * 本地存储实现,封装localStorage和sessionStorage
+   * author: https://github.com/ustbhuangyi/storage
    */
   var store = {
     storage: window.localStorage,
@@ -122,92 +147,150 @@
   var VERSION = 'version';
   var defaultGuarded = [GUARDED, VERSION];
 
-  function VersionStorage(version, guarded) {
-    if (!version) {
-      console.error('Constructor VersionStorage require a version at arguments[0]');
-      return;
+  var VersionStorage = function () {
+    function VersionStorage(version, guarded) {
+      classCallCheck(this, VersionStorage);
+
+      if (!version) {
+        console.error('Constructor VersionStorage require a version at arguments[0]');
+        return;
+      }
+      this.version = version + '';
+      if (guarded && Array.isArray(guarded)) {
+        guarded = unique(guarded.concat(defaultGuarded));
+      } else {
+        guarded = defaultGuarded;
+      }
+      this.guarded = guarded;
+      this._init();
     }
-    this.version = version + '';
-    if (guarded && Array.isArray(guarded)) {
-      guarded = unique(guarded.concat(defaultGuarded));
-    } else {
-      guarded = defaultGuarded;
-    }
-    this.guarded = guarded;
-    this._init();
-  }
 
-  VersionStorage.prototype.set = function (key, val) {
+    /**
+     * get a value in storage
+     * @param {String} key
+     * @param {Any} def default value
+     */
 
-    var realKey = this._getKey(key);
-    return store.set(realKey, val);
-  };
 
-  VersionStorage.prototype.get = function (key, def) {
-    var realKey = this._getKey(key);
-    return store.get(realKey, def);
-  };
+    createClass(VersionStorage, [{
+      key: 'get',
+      value: function get$$1(key, def) {
+        var realKey = this._getKey(key);
+        return store.get(realKey, def);
+      }
 
-  VersionStorage.prototype.has = function (key) {
-    var realKey = this._getKey(key);
-    return store.has(realKey);
-  };
+      /**
+       * set a value in storage
+       * @param {String} key
+       * @param {Any} val
+       * @param {Boolean} nosuffix without suffix on key
+       */
 
-  VersionStorage.prototype.remove = function (key) {
-    var realKey = this._getKey(key);
-    return store.remove(realKey);
-  };
+    }, {
+      key: 'set',
+      value: function set$$1(key, val) {
 
-  VersionStorage.prototype.clear = function () {
-    return store.clear();
-  };
+        var realKey = this._getKey(key);
+        return store.set(realKey, val);
+      }
 
-  VersionStorage.prototype.getAll = function () {
-    return store.getAll();
-  };
+      /**
+       * storage[key] !== undefined
+       * @param {String} key
+       */
 
-  VersionStorage.prototype.forEach = function (callback) {
-    return store.forEach(callback);
-  };
+    }, {
+      key: 'has',
+      value: function has(key) {
+        var realKey = this._getKey(key);
+        return store.has(realKey);
+      }
+    }, {
+      key: 'remove',
+      value: function remove(key) {
+        var realKey = this._getKey(key);
+        return store.remove(realKey);
+      }
+    }, {
+      key: 'clear',
+      value: function clear() {
+        return store.clear();
+      }
+    }, {
+      key: 'getAll',
+      value: function getAll() {
+        return store.getAll();
+      }
+    }, {
+      key: 'forEach',
+      value: function forEach(callback) {
+        return store.forEach(callback);
+      }
 
-  VersionStorage.prototype._getKey = function (key) {
-    if (this._isGuarded(key)) {
-      return key;
-    }
-    return suffix(key, this.version);
-  };
+      /**
+       * return a real key whether has a suffix
+       * @param {String} key
+       */
 
-  VersionStorage.prototype._isGuarded = function (key, cacheGuarded) {
-    var guarded = cacheGuarded || store.get(GUARDED);
-    return guarded && guarded.indexOf(key) > -1;
-  };
+    }, {
+      key: '_getKey',
+      value: function _getKey(key) {
+        if (this._isGuarded(key)) {
+          return key;
+        }
+        return suffix(key, this.version);
+      }
 
-  VersionStorage.prototype._init = function () {
-    var localVersion = store.get(VERSION);
-    var localGuarded = store.get(GUARDED);
+      /**
+       * a key should be suffixed or not
+       * @param {String} key
+       * @param {Array} cacheGuarded
+       */
 
-    var versionLegal = localVersion && this.version === localVersion;
-    var guardedLegal = localGuarded && Array.isArray(localGuarded) && localGuarded.length > 0 && this.guarded.every(function (guard) {
-      return localGuarded.indexOf(guard) > -1;
-    });
+    }, {
+      key: '_isGuarded',
+      value: function _isGuarded(key, cacheGuarded) {
+        var guarded = cacheGuarded || store.get(GUARDED);
+        return guarded && guarded.indexOf(key) > -1;
+      }
 
-    // 当前版本不匹配, 或者guarded字段不存在, 将默认guarded设为guarded, 然后清除非guarded字段
-    if (!versionLegal || !guardedLegal) {
-      store.set(GUARDED, this.guarded);
-      store.set(VERSION, this.version);
-      var all = store.getAll();
-      for (var key in all) {
-        if (!this._isGuarded(key, this.guarded)) {
-          store.remove(key);
+      /**
+       * called by constructor, detect the version suffix
+       * if the version and the guarded matched, do nothing
+       * else clear storage and init again
+       */
+
+    }, {
+      key: '_init',
+      value: function _init() {
+        var localVersion = store.get(VERSION);
+        var localGuarded = store.get(GUARDED);
+
+        var versionLegal = localVersion && this.version === localVersion;
+        var guardedLegal = localGuarded && Array.isArray(localGuarded) && localGuarded.length > 0 && this.guarded.every(function (guard) {
+          return localGuarded.indexOf(guard) > -1;
+        });
+
+        // 当前版本不匹配, 或者guarded字段不存在, 将默认guarded设为guarded, 然后清除非guarded字段
+        if (!versionLegal || !guardedLegal) {
+          store.set(GUARDED, this.guarded);
+          store.set(VERSION, this.version);
+          var all = store.getAll();
+          for (var key in all) {
+            if (!this._isGuarded(key, this.guarded)) {
+              store.remove(key);
+            }
+          }
+        }
+
+        if (guardedLegal && this.guarded.length > localGuarded.length) {
+          this.guarded = unique(this.guarded.concat(localGuarded));
+          store.set(GUARDED, this.guarded);
         }
       }
-    }
-
-    if (guardedLegal && this.guarded.length > localGuarded.length) {
-      this.guarded = unique(this.guarded.concat(localGuarded));
-      store.set(GUARDED, this.guarded);
-    }
-  };
+    }]);
+    return VersionStorage;
+  }();
 
   return VersionStorage;
 
